@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#3B82F6">
+    <meta name="description" content="Application de gestion de citerne diesel pour la ferme">
+    <title>Gestion Citerne Diesel</title>
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkdlc3Rpb24gQ2l0ZXJuZSBEaWVzZWwiLAogICJzaG9ydF9uYW1lIjogIkNpdGVybmUiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI2ZmZmZmZiIsCiAgInRoZW1lX2NvbG9yIjogIiMzQjgyRjYiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaeUI0Yld4dWN6MGlhSFIwY0RvdkwzZDNkeTUzTXk1dmNtY3ZNakF3TUM5emRtY2lJSFpwWlhkQ2IzZzlJakFnTUNBeE1EQWdNVEF3SWo0OGNtVmpkQ0IzYVdSMGFEMGlNVEF3SWlCb1pXbG5hSFE5SWpFd01DSWdabWxzYkQwaUl6TTRMVEV4TWlJdlBpOHZQZz09IiwKICAgICAgInNpemVzIjogIjE5MngxOTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIgogICAgfQogIF0KfQ==">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            overscroll-behavior: none;
+        }
+        input, select, button {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    
+    <script type="text/babel">
+        const { useState } = React;
+
+        function App() {
+            const [capaciteCiterne] = useState(8000);
+            const [niveauActuel, setNiveauActuel] = useState(0);
+            const [operations, setOperations] = useState([]);
+            const [activeTab, setActiveTab] = useState('dashboard');
+            const [showModifierNiveau, setShowModifierNiveau] = useState(false);
+            const [nouveauNiveau, setNouveauNiveau] = useState('');
+            
+            const [formPlein, setFormPlein] = useState({
+                date: new Date().toISOString().split('T')[0],
+                vehicule: '',
+                autreVehicule: '',
+                litres: ''
+            });
+            
+            const [formLivraison, setFormLivraison] = useState({
+                date: new Date().toISOString().split('T')[0],
+                litres: ''
+            });
+
+            const vehicules = [
+                'T4030N',
+                'Merlot',
+                'T6.180',
+                'T7.160',
+                'TX 68',
+                'Fourgon',
+                'T6 California',
+                'Autre véhicule à préciser'
+            ];
+
+            const modifierNiveau = () => {
+                const niveau = parseFloat(nouveauNiveau);
+                if (niveau >= 0 && niveau <= capaciteCiterne) {
+                    setNiveauActuel(niveau);
+                    setNouveauNiveau('');
+                    setShowModifierNiveau(false);
+                    alert('✅ Niveau de la citerne mis à jour !');
+                } else {
+                    alert('⚠️ Le niveau doit être entre 0 et ' + capaciteCiterne + ' litres');
+                }
+            };
+
+            const ajouterPlein = (e) => {
+                e.preventDefault();
+                if (formPlein.vehicule && formPlein.litres) {
+                    const litres = parseFloat(formPlein.litres);
+                    if (litres > niveauActuel) {
+                        alert('⚠️ Attention : Il n\'y a pas assez de diesel dans la citerne !');
+                        return;
+                    }
+                    
+                    let nomVehicule = formPlein.vehicule;
+                    if (formPlein.vehicule === 'Autre véhicule à préciser' && formPlein.autreVehicule) {
+                        nomVehicule = formPlein.autreVehicule;
+                    }
+                    
+                    const nouvelleOperation = {
+                        id: Date.now(),
+                        type: 'plein',
+                        date: formPlein.date,
+                        vehicule: nomVehicule,
+                        litres: litres,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    setOperations([nouvelleOperation, ...operations]);
+                    setNiveauActuel(niveauActuel - litres);
+                    
+                    setFormPlein({
+                        date: new Date().toISOString().split('T')[0],
+                        vehicule: '',
+                        autreVehicule: '',
+                        litres: ''
+                    });
+                    
+                    alert('✅ Plein enregistré avec succès !');
+                }
+            };
+
+            const ajouterLivraison = (e) => {
+                e.preventDefault();
+                if (formLivraison.litres) {
+                    const litres = parseFloat(formLivraison.litres);
+                    const nouveauNiveauTemp = niveauActuel + litres;
+                    
+                    if (nouveauNiveauTemp > capaciteCiterne) {
+                        alert('⚠️ Attention : La livraison dépasse la capacité de la citerne !');
+                        return;
+                    }
+                    
+                    const nouvelleOperation = {
+                        id: Date.now(),
+                        type: 'livraison',
+                        date: formLivraison.date,
+                        litres: litres,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    setOperations([nouvelleOperation, ...operations]);
+                    setNiveauActuel(nouveauNiveauTemp);
+                    
+                    setFormLivraison({
+                        date: new Date().toISOString().split('T')[0],
+                        litres: ''
+                    });
+                    
+                    alert('✅ Livraison enregistrée avec succès !');
+                }
+            };
+
+            const supprimerOperation = (id) => {
+                if (confirm('Êtes-vous sûr de vouloir supprimer cette opération ?')) {
+                    const operation = operations.find(op => op.id === id);
+                    if (operation.type === 'plein') {
+                        setNiveauActuel(niveauActuel + operation.litres);
+                    } else {
+                        setNiveauActuel(niveauActuel - operation.litres);
+                    }
+                    setOperations(operations.filter(op => op.id !== id));
+                }
+            };
+
+            const pourcentage = (niveauActuel / capaciteCiterne) * 100;
+            const couleurJauge = pourcentage > 50 ? 'bg-green-500' : pourcentage > 20 ? 'bg-yellow-500' : 'bg-red-500';
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 pb-20">
+                    <div className="container mx-auto px-3 py-4 max-w-4xl">
+                        {/* En-tête compact pour mobile */}
+                        <div className="bg-white rounded-lg shadow-lg p-4 mb-4">
+                            <div className="flex justify-between items-center">
+                                <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                                    <span className="text-3xl">⛽</span>
+                                    Citerne Diesel
+                                </h1>
+                                <button
+                                    onClick={() => {
+                                        if (navigator.share) {
+                                            navigator.share({
+                                                title: 'Gestion Citerne Diesel',
+                                                text: 'Application de gestion de la citerne diesel de la ferme',
+                                                url: window.location.href
+                                            }).catch(() => {});
+                                        } else {
+                                            navigator.clipboard.writeText(window.location.href);
+                                            alert('📋 Lien copié ! Vous pouvez le partager avec vos collaborateurs.');
+                                        }
+                                    }}
+                                    className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg font-semibold shadow-lg flex items-center gap-2 hover:from-blue-600 hover:to-blue-700 active:scale-95 transition-all"
+                                >
+                                    <span className="text-xl">📤</span>
+                                    <span className="hidden sm:inline">Partager</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Navigation optimisée mobile */}
+                        <div className="bg-white rounded-lg shadow-lg mb-4 overflow-x-auto">
+                            <div className="flex">
+                                <button
+                                    onClick={() => setActiveTab('dashboard')}
+                                    className={`flex-1 min-w-[80px] py-3 px-2 text-sm font-semibold transition ${
+                                        activeTab === 'dashboard'
+                                            ? 'bg-blue-500 text-white border-b-4 border-blue-600'
+                                            : 'text-gray-600'
+                                    }`}
+                                >
+                                    📊 Tableau
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('plein')}
+                                    className={`flex-1 min-w-[80px] py-3 px-2 text-sm font-semibold transition ${
+                                        activeTab === 'plein'
+                                            ? 'bg-blue-500 text-white border-b-4 border-blue-600'
+                                            : 'text-gray-600'
+                                    }`}
+                                >
+                                    🚜 Plein
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('livraison')}
+                                    className={`flex-1 min-w-[80px] py-3 px-2 text-sm font-semibold transition ${
+                                        activeTab === 'livraison'
+                                            ? 'bg-blue-500 text-white border-b-4 border-blue-600'
+                                            : 'text-gray-600'
+                                    }`}
+                                >
+                                    🚚 Livraison
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('historique')}
+                                    className={`flex-1 min-w-[80px] py-3 px-2 text-sm font-semibold transition ${
+                                        activeTab === 'historique'
+                                            ? 'bg-blue-500 text-white border-b-4 border-blue-600'
+                                            : 'text-gray-600'
+                                    }`}
+                                >
+                                    📋 Historique
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Modal pour modifier le niveau */}
+                        {showModifierNiveau && (
+                            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                                <div className="bg-white rounded-lg p-6 max-w-md w-full">
+                                    <h3 className="text-xl font-bold mb-4">Modifier le niveau</h3>
+                                    <div className="mb-4">
+                                        <label className="block text-gray-700 font-semibold mb-2">
+                                            Nouveau niveau (litres)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            min="0"
+                                            max={capaciteCiterne}
+                                            value={nouveauNiveau}
+                                            onChange={(e) => setNouveauNiveau(e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg"
+                                            placeholder="0"
+                                            autoFocus
+                                        />
+                                        <p className="text-sm text-gray-500 mt-2">
+                                            Capacité max : {capaciteCiterne} L
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={() => {
+                                                setShowModifierNiveau(false);
+                                                setNouveauNiveau('');
+                                            }}
+                                            className="flex-1 bg-gray-300 text-gray-700 font-bold py-3 px-4 rounded-lg"
+                                        >
+                                            Annuler
+                                        </button>
+                                        <button
+                                            onClick={modifierNiveau}
+                                            className="flex-1 bg-blue-500 text-white font-bold py-3 px-4 rounded-lg"
+                                        >
+                                            Valider
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Contenu selon l'onglet actif */}
+                        {activeTab === 'dashboard' && (
+                            <div className="space-y-4">
+                                {/* Instructions d'installation Android */}
+                                <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg shadow-lg p-4 text-white">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <span className="text-3xl">📱</span>
+                                        <h3 className="text-lg font-bold">Installer sur Android</h3>
+                                    </div>
+                                    <div className="bg-white bg-opacity-20 rounded-lg p-3 mb-3 text-sm">
+                                        <p className="font-semibold mb-2">📲 Comment installer :</p>
+                                        <ol className="space-y-2 ml-4">
+                                            <li>1️⃣ Ouvrez cette page dans <strong>Chrome</strong></li>
+                                            <li>2️⃣ Appuyez sur les <strong>3 points</strong> en haut à droite ⋮</li>
+                                            <li>3️⃣ Choisissez <strong>"Ajouter à l'écran d'accueil"</strong> ou <strong>"Installer l'application"</strong></li>
+                                            <li>4️⃣ Confirmez en appuyant sur <strong>"Ajouter"</strong></li>
+                                        </ol>
+                                    </div>
+                                    <div className="bg-yellow-400 bg-opacity-30 rounded-lg p-2 text-sm">
+                                        💡 <strong>Astuce :</strong> Une fois installée, l'icône apparaîtra sur votre écran d'accueil comme une vraie application !
+                                    </div>
+                                </div>
+
+                                {/* Carte de partage */}
+                                <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg shadow-lg p-4 text-white">
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <span className="text-3xl">👥</span>
+                                        <h3 className="text-lg font-bold">Partagez avec vos collaborateurs</h3>
+                                    </div>
+                                    <p className="text-blue-50 text-sm mb-4">
+                                        Cliquez sur le bouton ci-dessous pour partager l'application par WhatsApp, email ou SMS.
+                                    </p>
+                                    <button
+                                        onClick={() => {
+                                            if (navigator.share) {
+                                                navigator.share({
+                                                    title: 'Gestion Citerne Diesel',
+                                                    text: '🚜 Application de gestion de notre citerne diesel. Utilisez cette app pour noter les pleins et les livraisons !',
+                                                    url: window.location.href
+                                                }).catch(() => {});
+                                            } else {
+                                                navigator.clipboard.writeText(window.location.href);
+                                                alert('📋 Lien copié dans le presse-papier !\n\nVous pouvez maintenant le coller dans WhatsApp, SMS ou email pour le partager avec vos collaborateurs.');
+                                            }
+                                        }}
+                                        className="w-full bg-white text-blue-600 font-bold py-3 px-6 rounded-lg shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
+                                    >
+                                        <span className="text-2xl">📤</span>
+                                        <span>Partager l'application</span>
+                                    </button>
+                                </div>
+                                
+                                {/* Jauge de la citerne */}
+                                <div className="bg-white rounded-lg shadow-lg p-4">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h2 className="text-xl font-bold text-gray-800">Niveau citerne</h2>
+                                        <button
+                                            onClick={() => setShowModifierNiveau(true)}
+                                            className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+                                        >
+                                            ✏️ Modifier
+                                        </button>
+                                    </div>
+                                    
+                                    <div className="mb-4">
+                                        <div className="bg-gray-200 rounded-full h-10 overflow-hidden">
+                                            <div
+                                                className={`${couleurJauge} h-full transition-all duration-500 flex items-center justify-end px-3`}
+                                                style={{ width: `${pourcentage}%` }}
+                                            >
+                                                {pourcentage > 10 && (
+                                                    <span className="text-white font-bold text-sm">
+                                                        {pourcentage.toFixed(1)}%
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="text-center mt-3">
+                                            <span className="text-2xl font-bold text-gray-800">
+                                                {niveauActuel.toFixed(0)} L
+                                            </span>
+                                            <span className="text-gray-500"> / {capaciteCiterne} L</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-center">
+                                        <div className="text-4xl mb-2">⛽</div>
+                                        <div className={`font-bold text-lg ${
+                                            pourcentage > 50 ? 'text-green-600' : 
+                                            pourcentage > 20 ? 'text-yellow-600' : 
+                                            'text-red-600'
+                                        }`}>
+                                            {pourcentage > 50 ? 'BON' : pourcentage > 20 ? 'MOYEN' : pourcentage === 0 ? 'VIDE' : 'FAIBLE'}
+                                        </div>
+                                    </div>
+
+                                    {pourcentage < 20 && (
+                                        <div className="mt-4 p-3 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm">
+                                            <p className="font-bold">⚠️ {pourcentage === 0 ? 'Citerne vide !' : 'Niveau bas !'}</p>
+                                            <p>Commander une livraison</p>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Statistiques */}
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div className="bg-white rounded-lg shadow-lg p-4">
+                                        <div className="text-gray-600 text-sm mb-1">Pleins ce mois</div>
+                                        <div className="text-3xl font-bold text-blue-600">
+                                            {operations.filter(op => 
+                                                op.type === 'plein' && 
+                                                new Date(op.date).getMonth() === new Date().getMonth()
+                                            ).length}
+                                        </div>
+                                    </div>
+                                    <div className="bg-white rounded-lg shadow-lg p-4">
+                                        <div className="text-gray-600 text-sm mb-1">Consommés ce mois</div>
+                                        <div className="text-3xl font-bold text-orange-600">
+                                            {operations
+                                                .filter(op => 
+                                                    op.type === 'plein' && 
+                                                    new Date(op.date).getMonth() === new Date().getMonth()
+                                                )
+                                                .reduce((sum, op) => sum + op.litres, 0)
+                                                .toFixed(0)} L
+                                        </div>
+                                    </div>
+                                    <div className="bg-white rounded-lg shadow-lg p-4">
+                                        <div className="text-gray-600 text-sm mb-1">Dernière livraison</div>
+                                        <div className="text-2xl font-bold text-green-600">
+                                            {operations.find(op => op.type === 'livraison')
+                                                ? new Date(operations.find(op => op.type === 'livraison').date).toLocaleDateString('fr-FR')
+                                                : 'Aucune'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'plein' && (
+                            <div className="bg-white rounded-lg shadow-lg p-4">
+                                <h2 className="text-xl font-bold text-gray-800 mb-4">🚜 Nouveau plein</h2>
+                                <form onSubmit={ajouterPlein} className="space-y-4">
+                                    <div>
+                                        <label className="block text-gray-700 font-semibold mb-2">Date</label>
+                                        <input
+                                            type="date"
+                                            value={formPlein.date}
+                                            onChange={(e) => setFormPlein({...formPlein, date: e.target.value})}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 font-semibold mb-2">Véhicule</label>
+                                        <select
+                                            value={formPlein.vehicule}
+                                            onChange={(e) => setFormPlein({...formPlein, vehicule: e.target.value})}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                                            required
+                                        >
+                                            <option value="">Sélectionner</option>
+                                            {vehicules.map(v => (
+                                                <option key={v} value={v}>{v}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    {formPlein.vehicule === 'Autre véhicule à préciser' && (
+                                        <div>
+                                            <label className="block text-gray-700 font-semibold mb-2">Préciser</label>
+                                            <input
+                                                type="text"
+                                                value={formPlein.autreVehicule}
+                                                onChange={(e) => setFormPlein({...formPlein, autreVehicule: e.target.value})}
+                                                className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                                                placeholder="Nom du véhicule"
+                                                required
+                                            />
+                                        </div>
+                                    )}
+                                    <div>
+                                        <label className="block text-gray-700 font-semibold mb-2">Litres</label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            min="0"
+                                            value={formPlein.litres}
+                                            onChange={(e) => setFormPlein({...formPlein, litres: e.target.value})}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg"
+                                            placeholder="0"
+                                            required
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        className="w-full bg-blue-500 text-white font-bold py-4 px-6 rounded-lg text-lg active:bg-blue-600"
+                                    >
+                                        ✅ Enregistrer
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+
+                        {activeTab === 'livraison' && (
+                            <div className="bg-white rounded-lg shadow-lg p-4">
+                                <h2 className="text-xl font-bold text-gray-800 mb-4">🚚 Nouvelle livraison</h2>
+                                <form onSubmit={ajouterLivraison} className="space-y-4">
+                                    <div>
+                                        <label className="block text-gray-700 font-semibold mb-2">Date</label>
+                                        <input
+                                            type="date"
+                                            value={formLivraison.date}
+                                            onChange={(e) => setFormLivraison({...formLivraison, date: e.target.value})}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-gray-700 font-semibold mb-2">Litres livrés</label>
+                                        <input
+                                            type="number"
+                                            step="0.1"
+                                            min="0"
+                                            value={formLivraison.litres}
+                                            onChange={(e) => setFormLivraison({...formLivraison, litres: e.target.value})}
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg"
+                                            placeholder="0"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="bg-blue-50 p-4 rounded-lg text-sm">
+                                        <p className="text-gray-700">
+                                            <strong>Actuel :</strong> {niveauActuel.toFixed(0)} L<br/>
+                                            <strong>Après :</strong> {(niveauActuel + (parseFloat(formLivraison.litres) || 0)).toFixed(0)} L
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        className="w-full bg-green-500 text-white font-bold py-4 px-6 rounded-lg text-lg active:bg-green-600"
+                                    >
+                                        ✅ Enregistrer
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+
+                        {activeTab === 'historique' && (
+                            <div className="bg-white rounded-lg shadow-lg p-4">
+                                <h2 className="text-xl font-bold text-gray-800 mb-4">📋 Historique</h2>
+                                {operations.length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        <div className="text-5xl mb-3">📝</div>
+                                        <p>Aucune opération</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {operations.map(op => (
+                                            <div
+                                                key={op.id}
+                                                className={`p-4 rounded-lg border-l-4 ${
+                                                    op.type === 'plein'
+                                                        ? 'bg-orange-50 border-orange-500'
+                                                        : 'bg-green-50 border-green-500'
+                                                }`}
+                                            >
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <span className="text-2xl">
+                                                                {op.type === 'plein' ? '🚜' : '🚚'}
+                                                            </span>
+                                                            <span className="font-bold text-gray-800">
+                                                                {op.type === 'plein' ? 'Plein' : 'Livraison'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-gray-700 text-sm space-y-1">
+                                                            <p>{new Date(op.date).toLocaleDateString('fr-FR')}</p>
+                                                            {op.vehicule && <p><strong>Véhicule :</strong> {op.vehicule}</p>}
+                                                            <p className="text-lg font-bold">{op.litres} L</p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => supprimerOperation(op.id)}
+                                                        className="text-red-500 text-2xl px-2"
+                                                    >
+                                                        🗑️
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
